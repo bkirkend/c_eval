@@ -168,9 +168,8 @@ stack *infix_to_reverse_polish(char *expr){
       case OPERATOR:
         if(!stack_empty(op_stack) && get_precedence(stack_top(op_stack).op) >= get_precedence(t.op)){
           stack_push(num_stack, stack_pop(op_stack));
-        } else {
-          stack_push(op_stack, t);
         }
+        stack_push(op_stack, t);
         break;
       case NUMBER:
         stack_push(num_stack, t);
@@ -222,8 +221,8 @@ stack *infix_to_reverse_polish(char *expr){
 
 int evaluate_reverse_polish(stack *pfix_stack){
   stack_reverse(pfix_stack);
-
   stack *eval_stack = stack_init();
+
   while(!stack_empty(pfix_stack)){
     token t = stack_pop(pfix_stack);
     if(t.type == OPERATOR){
