@@ -7,7 +7,7 @@ SOURCES= \
 	src/main.c
 
 $(EXE): clean 
-	$(CC) $(SOURCES) $(CFLAGS) -o $@
+	$(CC) $(SOURCES) $(CFLAGS) -o $@ && ./$(EXE)
 
 memory: $(EXE)
 	leaks --atExit -- ./$(EXE)

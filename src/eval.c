@@ -54,8 +54,8 @@ static int get_precedence(char op){
       return 2;
     case '^':
       return 3;
-    case '!':
-      return 4;
+    // case '!':
+    //   return 4;
     default:
       return 0;
   } 
@@ -166,7 +166,7 @@ stack *infix_to_reverse_polish(char *expr){
   while((t = next_token(l)).type != EOF_TOKEN){
     switch(t.type){
       case OPERATOR:
-        if(!stack_empty(op_stack) && get_precedence(stack_top(op_stack).op) >= get_precedence(t.op)){
+        while(!stack_empty(op_stack) && get_precedence(stack_top(op_stack).op) >= get_precedence(t.op)){
           stack_push(num_stack, stack_pop(op_stack));
         }
         stack_push(op_stack, t);
@@ -222,6 +222,7 @@ stack *infix_to_reverse_polish(char *expr){
 int evaluate_reverse_polish(stack *pfix_stack){
   stack_reverse(pfix_stack);
   stack *eval_stack = stack_init();
+
 
   while(!stack_empty(pfix_stack)){
     token t = stack_pop(pfix_stack);
