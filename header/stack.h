@@ -7,7 +7,8 @@
 
 typedef enum {
   NUMBER,
-  OPERATOR,
+  BINARY_OPERATOR,
+  UNARY_OPERATOR,
   OPEN_PAR,
   CLOSE_PAR,
   EOF_TOKEN,

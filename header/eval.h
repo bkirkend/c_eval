@@ -6,12 +6,14 @@
 typedef struct {
   int idx;
   char *expr;
+  token prev;
 } lexer;
 
-typedef int (*operator)(int, int);
+typedef int (*bin_operator)(int, int);
+typedef int (*unary_operator)(int);
 
-
-operator get_operator(char c);
+bin_operator get_bin_operator(char c);
+unary_operator get_unary_operator(char c);
 lexer* init_lexer(char *eval_str);
 token next_token(lexer *l);
 stack *infix_to_reverse_polish(char *expr);

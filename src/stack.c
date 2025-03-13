@@ -64,7 +64,8 @@ void stack_print(stack *s){
   for(int i = s->size - 1; i >= 0; i--){
     token t = s->items[i];
     switch(t.type){
-      case OPERATOR:
+      case BINARY_OPERATOR:
+      case UNARY_OPERATOR:
         printf("%c\n", t.op);
         break;
       case NUMBER:

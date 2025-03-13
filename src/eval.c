@@ -20,6 +20,10 @@ static inline int divide(int a, int b){
   return a / b;
 }
 
+static inline int mod(int a, int b){
+  return a % b;
+}
+
 static inline int power(int a, int b) {
     int result = 1;
     while (b > 0) {
@@ -34,15 +38,19 @@ static inline int power(int a, int b) {
     return result;
 }
 
-// static inline int factorial(int a){
-//   if (a == 0) return 1;
-//
-//   int value = 1;
-//   for(int i = a; i > 1; i--){
-//     value *= i;
-//   }
-//   return value;
-// }
+static inline int factorial(int a){
+  if (a == 0) return 1;
+
+  int value = 1;
+  for(int i = a; i > 1; i--){
+    value *= i;
+  }
+  return value;
+}
+
+static inline int inverse(int a){
+  return -a;
+}
 
 static int get_precedence(char op){
   switch(op){
@@ -51,17 +59,16 @@ static int get_precedence(char op){
       return 1;
     case '*':
     case '/':
+    case '%':
       return 2;
     case '^':
       return 3;
-    // case '!':
-    //   return 4;
     default:
       return 0;
   } 
 }
 
-operator get_operator(char c){
+bin_operator get_bin_operator(char c){
   switch (c) {
     case '+':
       return add;
@@ -73,13 +80,26 @@ operator get_operator(char c){
       return divide;
     case '^':
       return power;
-    // case '!':
-    //   return factorial;
+    case '%':
+      return mod;
 
     default:
       return NULL;
   }
 }
+
+unary_operator get_unary_operator(char c){
+  switch(c) {
+    case '-':
+      return inverse;
+    case '!':
+      return factorial;
+
+    default:
+      return NULL;
+  }
+}
+
 
 static bool is_digit(char c){
   return '0' <= c && c <= '9';
@@ -107,6 +127,8 @@ lexer* init_lexer(char *eval_str){
   }
   l->idx = 0;
   l->expr = eval_str;
+  token t = {.type = INVALID_TOKEN};
+  l->prev = t;
   return l;
 }
 
@@ -114,11 +136,17 @@ token next_token(lexer *l){
   //ignore whitespace
   while(l->expr[l->idx] == ' ') l->idx++;
   char c = l->expr[l->idx];
-
+  
+  token t = {.type = INVALID_TOKEN, .op = c};
   // check if operator
   if (is_op(c)){
     l->idx++;
-    token t = {.type = OPERATOR, .op = c};
+    if (l->prev.type != NUMBER){
+      t.type = UNARY_OPERATOR;
+    } else {
+      t.type = BINARY_OPERATOR;
+    }
+    l->prev = t;
     return t;
   }
 
@@ -131,6 +159,7 @@ token next_token(lexer *l){
       value += next_int;
     }
     token t = {.type = NUMBER, .num = value};
+    l->prev = t;
     return t;
   }
 
@@ -138,6 +167,7 @@ token next_token(lexer *l){
   if(c == '('){
     l->idx++;
     token t = {.type = OPEN_PAR};
+    l->prev = t;
     return t;
   }
 
@@ -145,15 +175,19 @@ token next_token(lexer *l){
   if(c == ')'){
     l->idx++;
     token t = {.type = CLOSE_PAR};
+    l->prev = t;
     return t;
   }
 
   // EOF
   if(c == '\0' || c == '\n' || c == '\r'){
     token t = {.type = EOF_TOKEN};
+    l->prev = t;
     return t;
   }
-  token t = {.type = INVALID_TOKEN};
+
+  l->idx++;
+  l->prev = t;
   return t;
 }
 
@@ -165,10 +199,13 @@ stack *infix_to_reverse_polish(char *expr){
   token t;
   while((t = next_token(l)).type != EOF_TOKEN){
     switch(t.type){
-      case OPERATOR:
+      case BINARY_OPERATOR:
         while(!stack_empty(op_stack) && get_precedence(stack_top(op_stack).op) >= get_precedence(t.op)){
           stack_push(num_stack, stack_pop(op_stack));
         }
+        stack_push(op_stack, t);
+        break;
+      case UNARY_OPERATOR:
         stack_push(op_stack, t);
         break;
       case NUMBER:
@@ -226,11 +263,17 @@ int evaluate_reverse_polish(stack *pfix_stack){
 
   while(!stack_empty(pfix_stack)){
     token t = stack_pop(pfix_stack);
-    if(t.type == OPERATOR){
+    if(t.type == BINARY_OPERATOR){
       int a = stack_pop(eval_stack).num; 
       int b = stack_pop(eval_stack).num;
-      token ab = {.type = NUMBER, .num = get_operator(t.op)(b, a)};
+      token ab = {.type = NUMBER, .num = get_bin_operator(t.op)(b, a)};
       stack_push(eval_stack, ab);
+
+    } else if(t.type == UNARY_OPERATOR){
+      int a = stack_pop(eval_stack).num;
+      token a_prime = {.type = NUMBER, .num = get_unary_operator(t.op)(a)};
+      stack_push(eval_stack, a_prime);
+
     } else if(t.type == NUMBER){
       stack_push(eval_stack, t);
     }
@@ -254,7 +297,8 @@ void print_tokens(char *expr){
   token t;
   while((t = next_token(l)).type != EOF_TOKEN){
     switch(t.type){
-      case OPERATOR:
+      case BINARY_OPERATOR:
+      case UNARY_OPERATOR:
         printf("operator: %c\n", t.op);
         break;
       case NUMBER: 
