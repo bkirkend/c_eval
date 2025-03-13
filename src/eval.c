@@ -141,9 +141,17 @@ token next_token(lexer *l){
   // check if operator
   if (is_op(c)){
     l->idx++;
-    if (l->prev.type != NUMBER){
+
+    if (c == '!'){ //postfix unary op
+      if(l->prev.type == NUMBER || l->prev.type == CLOSE_PAR){
+        t.type = UNARY_OPERATOR;
+      } else {
+        printf("Invalid factorial usage\n");
+        exit(1);
+      }
+    } else if (l->prev.type != NUMBER){ //prefix unary op
       t.type = UNARY_OPERATOR;
-    } else {
+    } else { //binary op
       t.type = BINARY_OPERATOR;
     }
     l->prev = t;
@@ -206,7 +214,11 @@ stack *infix_to_reverse_polish(char *expr){
         stack_push(op_stack, t);
         break;
       case UNARY_OPERATOR:
-        stack_push(op_stack, t);
+        if(t.op == '!'){ //factorial postfix op
+          stack_push(num_stack, t); 
+        } else { //negation prefix op
+          stack_push(op_stack, t);
+        }
         break;
       case NUMBER:
         stack_push(num_stack, t);
@@ -260,9 +272,9 @@ int evaluate_reverse_polish(stack *pfix_stack){
   stack_reverse(pfix_stack);
   stack *eval_stack = stack_init();
 
-
   while(!stack_empty(pfix_stack)){
     token t = stack_pop(pfix_stack);
+
     if(t.type == BINARY_OPERATOR){
       int a = stack_pop(eval_stack).num; 
       int b = stack_pop(eval_stack).num;
