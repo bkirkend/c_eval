@@ -25,6 +25,7 @@ static inline int mod(int a, int b){
 }
 
 static inline int power(int a, int b) {
+    if (b == 0) return 1;
     int result = 1;
     while (b > 0) {
         //multiplies normally if b is odd
@@ -149,7 +150,7 @@ token next_token(lexer *l){
         printf("Invalid factorial usage\n");
         exit(1);
       }
-    } else if (l->prev.type != NUMBER){ //prefix unary op
+    } else if (l->prev.type != NUMBER && l->prev.type != CLOSE_PAR){ //prefix unary op
       t.type = UNARY_OPERATOR;
     } else { //binary op
       t.type = BINARY_OPERATOR;
@@ -208,8 +209,10 @@ stack *infix_to_reverse_polish(char *expr){
   while((t = next_token(l)).type != EOF_TOKEN){
     switch(t.type){
       case BINARY_OPERATOR:
-        while(!stack_empty(op_stack) && get_precedence(stack_top(op_stack).op) >= get_precedence(t.op)){
-          stack_push(num_stack, stack_pop(op_stack));
+        while (!stack_empty(op_stack) &&
+              (get_precedence(stack_top(op_stack).op) > get_precedence(t.op) ||
+              (get_precedence(stack_top(op_stack).op) == get_precedence(t.op) && t.op != '^'))) {
+            stack_push(num_stack, stack_pop(op_stack));
         }
         stack_push(op_stack, t);
         break;
@@ -241,12 +244,17 @@ stack *infix_to_reverse_polish(char *expr){
             stack_push(num_stack, tmp_token);
           }
 
-          if(tmp_token.type == INVALID_TOKEN){
+          if(tmp_token.type != OPEN_PAR){
             printf("Mismatched parentheses\n");
             stack_free(num_stack);
             stack_free(op_stack);
             free(l);
             return NULL;
+          }
+          
+          // If '!' follows ')'
+          if (!stack_empty(op_stack) && stack_top(op_stack).type == UNARY_OPERATOR) {
+            stack_push(num_stack, stack_pop(op_stack));
           }
 
           break;
@@ -268,32 +276,66 @@ stack *infix_to_reverse_polish(char *expr){
   return num_stack;
 }
 
-int evaluate_reverse_polish(stack *pfix_stack){
-  stack_reverse(pfix_stack);
-  stack *eval_stack = stack_init();
+int evaluate_reverse_polish(stack *pfix_stack) {
+    stack_reverse(pfix_stack);
+    stack *eval_stack = stack_init();
 
-  while(!stack_empty(pfix_stack)){
-    token t = stack_pop(pfix_stack);
+    while (!stack_empty(pfix_stack)) {
+        token t = stack_pop(pfix_stack);
 
-    if(t.type == BINARY_OPERATOR){
-      int a = stack_pop(eval_stack).num; 
-      int b = stack_pop(eval_stack).num;
-      token ab = {.type = NUMBER, .num = get_bin_operator(t.op)(b, a)};
-      stack_push(eval_stack, ab);
+        switch (t.type) {
+            case BINARY_OPERATOR: {
+                if (stack_size(eval_stack) < 2) {
+                    printf("Error: Not enough operands for binary operator '%c'\n", t.op);
+                    stack_free(eval_stack);
+                    stack_free(pfix_stack);
+                    return -1;
+                }
 
-    } else if(t.type == UNARY_OPERATOR){
-      int a = stack_pop(eval_stack).num;
-      token a_prime = {.type = NUMBER, .num = get_unary_operator(t.op)(a)};
-      stack_push(eval_stack, a_prime);
+                int b = stack_pop(eval_stack).num;
+                int a = stack_pop(eval_stack).num;
+                token ab = {.type = NUMBER, .num = get_bin_operator(t.op)(a, b)};
+                stack_push(eval_stack, ab);
+                break;
+            }
 
-    } else if(t.type == NUMBER){
-      stack_push(eval_stack, t);
+            case UNARY_OPERATOR: {
+                if (stack_size(eval_stack) < 1) {
+                    printf("Error: Not enough operands for unary operator '%c'\n", t.op);
+                    stack_free(eval_stack);
+                    stack_free(pfix_stack);
+                    return -1;
+                }
+
+                int a = stack_pop(eval_stack).num;  
+                token a_prime = {.type = NUMBER, .num = get_unary_operator(t.op)(a)};
+                stack_push(eval_stack, a_prime);
+                break;
+            }
+
+            case NUMBER:
+                stack_push(eval_stack, t);
+                break;
+
+            default:
+                printf("Error! Unexpected token type\n");
+                stack_free(eval_stack);
+                stack_free(pfix_stack);
+                return -1;
+        }
     }
-  }
-  int ret_value = stack_pop(eval_stack).num;
-  stack_free(eval_stack);
-  stack_free(pfix_stack);
-  return ret_value;
+
+    if (stack_size(eval_stack) != 1) {
+        printf("Error: Evaluation failed. There should be exactly one result on the stack.\n");
+        stack_free(eval_stack);
+        stack_free(pfix_stack);
+        return -1;
+    }
+
+    int ret_value = stack_pop(eval_stack).num;
+    stack_free(eval_stack);
+    stack_free(pfix_stack);
+    return ret_value;
 }
 
 int eval(char *expr){

@@ -55,6 +55,10 @@ token stack_top(stack *s){
   return s->items[s->size - 1];
 }
 
+int stack_size(stack *s){
+  return s->size;
+}
+
 bool stack_empty(stack *s){
   return s->size <= 0;
 }
@@ -78,6 +82,7 @@ void stack_print(stack *s){
         printf(")\n");
         break;
       default:
+        printf("unrecognized token\n");
         break;
     }
   }

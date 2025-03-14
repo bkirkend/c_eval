@@ -34,6 +34,7 @@ void stack_free(stack *s);
 void stack_push(stack *s, token c);
 token stack_pop(stack *s);
 token stack_top(stack *s);
+int stack_size(stack *s);
 bool stack_empty(stack *s);
 void stack_print(stack *s);
 void stack_reverse(stack *s);
