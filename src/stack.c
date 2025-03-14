@@ -34,13 +34,14 @@ void stack_push(stack *s, token t){
 token stack_pop(stack *s){
   if (!s->size){
     printf("Error: Pop from empty stack\n");
+    exit(1);
   }
   return s->items[--s->size];
 }
 
 static void grow_stack(stack *s){
   int new_cap = s->cap << 1;
-  token *new_items = realloc(s->items, s->cap * sizeof(token));
+  token *new_items = realloc(s->items, new_cap * sizeof(token));
   if (!new_items){
     printf("Error: Stack reallocation\n");
   }
@@ -51,6 +52,7 @@ static void grow_stack(stack *s){
 token stack_top(stack *s){
   if (s->size <= 0){
     printf("Error: Peeking empty stack\n");
+    exit(1);
   }
   return s->items[s->size - 1];
 }
